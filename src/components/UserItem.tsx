@@ -6,8 +6,9 @@ import {User} from '../interface/interface';
 
 type UserItemType = {
     user: User
+    setUsers: (users: User[]) => void
 }
-export const UserItem: React.FC<UserItemType> = React.memo(({user}) => {
+export const UserItem: React.FC<UserItemType> = React.memo(({user, setUsers}) => {
     const {pathname} = useLocation()
     const idFromUrl = pathname.replace('/', '')
 
@@ -15,6 +16,7 @@ export const UserItem: React.FC<UserItemType> = React.memo(({user}) => {
         <NavLink key={user._id} to={MAIN_ROUTE + `${user._id}`}>
             <Button active={idFromUrl === user._id}
                     variant="outline-secondary"
+                    onClick={() => setUsers([])}
             >
                 {user.name}
             </Button>

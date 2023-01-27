@@ -43,7 +43,10 @@ export const Users = React.memo(() => {
 
             <Stack gap={1} className="col-md-5 mx-auto">
                 {users && users.map((u: User) =>
-                    <UserItem key={u._id} user={u}/>
+                    <UserItem key={u._id}
+                              user={u}
+                              setUsers={setUsers}
+                    />
                 )}
             </Stack>
         </Card>
