@@ -8,7 +8,6 @@ import {GameBox} from './GameBox/GameBox';
 
 
 export const AppRouts = () => {
-
     const {user} = AppState()
 
     return (

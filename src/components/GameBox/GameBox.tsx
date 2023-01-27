@@ -6,28 +6,31 @@ import {Header} from './Header';
 import {useParams} from 'react-router-dom';
 import Card from 'react-bootstrap/Card';
 import {createGame, finishGame} from '../../http/gameAPI';
+import {Room} from '../../interface/interface';
 
 
 const ENDPOINT = process.env.REACT_APP_ENDPOINT || 'http://localhost:5000/'
 const socket = io(ENDPOINT);
 
-export const GameBox = () => {
-    const {user} = AppState()
+export const GameBox = React.memo(() => {
+    const {user, setStatisticGames} = AppState()
     const {id} = useParams<{ id: string }>()
-    const [roomCode, setRoomCode] = useState<string | null>(null);
+    const [room, setRoom] = useState<Room | null>(null)
+    const [result, setResult] = useState<string>('')
 
     useEffect(() => {
-        console.log(roomCode)
-        if (roomCode) {
-            socket.emit('joinRoom', roomCode)
+        if (room) {
+            socket.emit('joinRoom', room._id)
         }
-    }, [roomCode])
+    }, [room])
 
     const onClickNewGameHandler = async () => {
         if (id && user) {
             try {
-                const game = await createGame(user._id, id)
-                setRoomCode(game._id)
+                const room = await createGame(user._id, id)
+                setRoom(room)
+                setResult('')
+                setStatisticGames({win: 0, loss: 0, tie: 0})
             } catch (e: any) {
                 throw new Error(e.message)
             }
@@ -35,10 +38,11 @@ export const GameBox = () => {
     }
 
     const onClickEndGameHandler = async () => {
-        if (roomCode) {
+        if (room) {
             try {
-                await finishGame(roomCode)
-                setRoomCode(null)
+                await finishGame(room._id)
+                setRoom(null)
+                setResult('')
             } catch (e: any) {
                 throw new Error(e.message)
             }
@@ -49,18 +53,21 @@ export const GameBox = () => {
         <Card style={{height: '85vh'}}>
             {
                 id ? <>
-                        <Header roomCode={roomCode}
+                        <Header room={room}
                                 crateGame={onClickNewGameHandler}
                                 endGame={onClickEndGameHandler}
+                                result={result}
                         />
                         {
-                            roomCode
-                                ? <Game socket={socket} roomCode={roomCode}/>
+                            room
+                                ? <Game socket={socket}
+                                        room={room}
+                                        setResult={setResult}
+                                />
                                 : <h3 className="align-self-center m-auto">
-                                     Нажмите "Начнить игру"
+                                    Нажмите "Начнить игру"
                                 </h3>
                         }
-
                     </>
                     : <h3 className="align-self-center m-auto">
                         Выберите игрока
@@ -68,4 +75,4 @@ export const GameBox = () => {
             }
         </Card>
     )
-}
+})

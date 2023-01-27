@@ -3,43 +3,98 @@ import './Game.css';
 import {Cell} from '../Cell/Cell';
 import {Socket} from 'socket.io-client';
 import {DefaultEventsMap} from '@socket.io/component-emitter';
+import {Patterns} from '../../utils/winningPatterns';
+import {clearBord} from '../../utils/clearBordTimeout';
+import {AppState} from '../../context/AppProvider';
+import {Room} from '../../interface/interface';
 
 type GameType = {
     socket: Socket<DefaultEventsMap, DefaultEventsMap>
-    roomCode: string | null
+    room: Room | null
+    setResult: (result: string) => void
 }
 
-export const Game: React.FC<GameType> = ({roomCode, socket}) => {
-    const [board, setBoard] = useState(['', '', '', '', '', '', '', '', ''])
-    const [canPlay, setCanPlay] = useState(true)
+export const Game: React.FC<GameType> = React.memo(({room, socket, setResult}) => {
+    const [board, setBoard] = useState<string[]>(['', '', '', '', '', '', '', '', ''])
+    const [canPlay, setCanPlay] = useState<boolean>(true)
+    const [currentName, setCurrentName] = useState<string>('')
+    const {user, setStatisticGames, statisticGames} = AppState()
+
+    useEffect(() => {
+        checkIfTie()
+        checkWin()
+    }, [board])
 
     useEffect(() => {
         socket.on('updateGame', (id: string) => {
-            console.log('use Effect', id);
-            setBoard((data) => ({...data, [id]: 'O'}));
-            setCanPlay(true);
-        });
-
+            setBoard(board.map((el, i) => i === +id ? el = 'O' : el))
+            setCanPlay(true)
+        })
         return () => {
             socket.off('updateGame')
         }
-    });
+    })
+
+    useEffect(() => {
+        socket.on('updateName', (name: string) => {
+            setCurrentName(name)
+        })
+        return () => {
+            socket.off('updateName')
+        }
+    })
 
     const handleCellClick = (e: MouseEvent<HTMLDivElement>) => {
-        const id: any = e.currentTarget.id
-        if (canPlay && board[id] === '') {
-            setBoard((data) => ({...data, [id]: 'X'}))
-            socket.emit('play', {id, roomCode})
+        const id = e.currentTarget.id
+        if (canPlay && board[+id] === '') {
+            setBoard([...board, board[+id] = 'X'])
+            setBoard(board.map((el, i) => i === +id ? el = 'X' : el))
+            socket.emit('play', {id, roomCode: room?._id})
+            socket.emit('change', {room, name: user.name})
             setCanPlay(false)
-        }
-
-        if (
-            (board[0] === 'X' && board[1] === 'X' && board[2] === 'X') ||
-            (board[0] === 'O' && board[1] === 'O' && board[2] === 'O')
-        ) {
-            setBoard(['', '', '', '', '', '', '', '', ''])
+            setResult('')
         }
     }
+
+    const checkWin = () => {
+        Patterns.forEach((currPattern) => {
+            const firstPlayer = board[currPattern[0]]
+            if (firstPlayer === '') return
+            let foundWinningPattern = true
+
+            currPattern.forEach((i) => {
+                if (board[i] !== firstPlayer) {
+                    foundWinningPattern = false
+                }
+            })
+            if (foundWinningPattern) {
+                setResult(currentName !== user.name ? 'Вы победили!' : `Вы проиграли`)
+                if (currentName !== user.name) {
+                    setStatisticGames({...statisticGames, win: statisticGames.win + 1})
+                } else {
+                    setStatisticGames({...statisticGames, loss: statisticGames.loss + 1})
+                }
+                clearBord(setBoard, 1500)
+                setCanPlay(true)
+            }
+        })
+    }
+
+    const checkIfTie = () => {
+        let filled = true
+        board.forEach((square) => {
+            if (square === '') {
+                filled = false;
+            }
+        })
+        if (filled) {
+            setResult('Ничья')
+            clearBord(setBoard, 1500)
+            setCanPlay(true)
+            setStatisticGames({...statisticGames, tie: statisticGames.tie + 1})
+        }
+    }
+
 
     return (
         <main>
@@ -58,4 +113,4 @@ export const Game: React.FC<GameType> = ({roomCode, socket}) => {
             </section>
         </main>
     )
-}
+})

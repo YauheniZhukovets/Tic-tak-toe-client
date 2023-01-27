@@ -7,11 +7,11 @@ type CellType = {
     handleCellClick: (e: MouseEvent<HTMLDivElement>) => void
 }
 
-export const Cell: React.FC<CellType> = ({handleCellClick, id, text}) => {
+export const Cell: React.FC<CellType> = React.memo(({handleCellClick, id, text}) => {
     return (
         <div id={id} className="cell" onClick={handleCellClick}>
             {text}
         </div>
     )
-}
+})
 
